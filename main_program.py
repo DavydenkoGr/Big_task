@@ -1,12 +1,13 @@
 import os
 import sys
-from scaling import scaling
 import requests
+from PyQt5 import Qt
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QStatusBar
 
 SCREEN_SIZE = [800, 450]
 map_api_server = "http://static-maps.yandex.ru/1.x/"
+geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
 
 
 class Example(QMainWindow):
@@ -15,9 +16,11 @@ class Example(QMainWindow):
         self.initUI()
 
     def getImage(self):
+        spn = str(0.01 * min(min(100, self.delta), 0.2))
+        print(f"{spn},{spn}")
         map_params = {
             "ll": ",".join([self.x_coord.text(), self.y_coord.text()]),
-            "spn": "0.01,0.01",
+            "spn": f"{spn},{spn}",
             "l": "map"
         }
         response = requests.get(map_api_server, map_params)
@@ -40,6 +43,8 @@ class Example(QMainWindow):
     def initUI(self):
         self.setGeometry(100, 100, *SCREEN_SIZE)
         self.setWindowTitle('Большая задача по Maps API')
+
+        self.delta = 1
 
         # Пространство под изображение
         self.map_file = "map.png"
@@ -68,6 +73,14 @@ class Example(QMainWindow):
     def closeEvent(self, event):
         """При закрытии формы подчищаем за собой"""
         os.remove(self.map_file)
+
+    def keyPressEvent(self, event):
+        if str(event.key()) == "16777238":
+            self.delta += self.delta * 0.5
+            self.getImage()
+        elif str(event.key()) == "16777239":
+            self.delta -= self.delta * 0.5
+            self.getImage()
 
 
 if __name__ == '__main__':
