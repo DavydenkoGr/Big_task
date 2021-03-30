@@ -6,6 +6,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QStatusBar
 
 SCREEN_SIZE = [800, 450]
+scales = ["0.002", "0.005", "0.01", "0.05", "0.1"]
 map_api_server = "http://static-maps.yandex.ru/1.x/"
 geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
 
@@ -16,8 +17,7 @@ class Example(QMainWindow):
         self.initUI()
 
     def getImage(self):
-        spn = str(0.002 * self.delta)
-        print(f"{spn},{spn}")
+        spn = scales[self.i]
         map_params = {
             "ll": ",".join([self.x_coord.text(), self.y_coord.text()]),
             "spn": f"{spn},{spn}",
@@ -44,7 +44,7 @@ class Example(QMainWindow):
         self.setGeometry(100, 100, *SCREEN_SIZE)
         self.setWindowTitle('Большая задача по Maps API')
 
-        self.delta = 11
+        self.i = 0
 
         # Пространство под изображение
         self.map_file = "map.png"
@@ -75,15 +75,13 @@ class Example(QMainWindow):
         os.remove(self.map_file)
 
     def keyPressEvent(self, event):
-        if self.delta > 40:
-            self.delta = 40
-        if self.delta < 6:
-            self.delta = 6
         if str(event.key()) == "16777238":
-            self.delta *= 1.5
+            if self.i != len(scales) - 1:
+                self.i += 1
             self.getImage()
         elif str(event.key()) == "16777239":
-            self.delta *= 0.5
+            if self.i != 0:
+                self.i -= 1
             self.getImage()
 
 
