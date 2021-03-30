@@ -3,9 +3,9 @@ import sys
 
 import requests
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton
 
-SCREEN_SIZE = [600, 450]
+SCREEN_SIZE = [800, 450]
 
 
 class Example(QWidget):
@@ -22,7 +22,6 @@ class Example(QWidget):
             print("Ошибка выполнения запроса:")
             print(map_request)
             print("Http статус:", response.status_code, "(", response.reason, ")")
-            sys.exit(1)
 
         # Запишем полученное изображение в файл.
         self.map_file = "map.png"
@@ -31,7 +30,7 @@ class Example(QWidget):
 
     def initUI(self):
         self.setGeometry(100, 100, *SCREEN_SIZE)
-        self.setWindowTitle('Отображение карты')
+        self.setWindowTitle('Большая задача по Maps API')
 
         ## Изображение
         self.pixmap = QPixmap(self.map_file)
@@ -39,6 +38,24 @@ class Example(QWidget):
         self.image.move(0, 0)
         self.image.resize(600, 450)
         self.image.setPixmap(self.pixmap)
+
+        self.x_coord, self.y_coord = QLineEdit(self), QLineEdit(self)
+        self.x_coord.resize(75, 25)
+        self.y_coord.resize(75, 25)
+        self.x_coord.move(600, 50)
+        self.y_coord.move(700, 50)
+
+        self.x_lbl, self.y_lbl = QLabel(self), QLabel(self)
+        self.x_lbl.setText("X")
+        self.y_lbl.setText("Y")
+        self.x_lbl.move(605, 25)
+        self.y_lbl.move(705, 25)
+
+        self.btn = QPushButton(self)
+        self.btn.setText("Искать")
+        self.btn.resize(100, 20)
+        self.btn.move(645, 80)
+        self.btn.clicked.connect(self.getImage)
 
     def closeEvent(self, event):
         """При закрытии формы подчищаем за собой"""
