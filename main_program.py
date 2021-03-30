@@ -16,7 +16,7 @@ class Example(QMainWindow):
         self.initUI()
 
     def getImage(self):
-        spn = str(0.01 * min(min(100, self.delta), 0.2))
+        spn = str(0.002 * self.delta)
         print(f"{spn},{spn}")
         map_params = {
             "ll": ",".join([self.x_coord.text(), self.y_coord.text()]),
@@ -44,7 +44,7 @@ class Example(QMainWindow):
         self.setGeometry(100, 100, *SCREEN_SIZE)
         self.setWindowTitle('Большая задача по Maps API')
 
-        self.delta = 1
+        self.delta = 11
 
         # Пространство под изображение
         self.map_file = "map.png"
@@ -75,11 +75,15 @@ class Example(QMainWindow):
         os.remove(self.map_file)
 
     def keyPressEvent(self, event):
+        if self.delta > 40:
+            self.delta = 40
+        if self.delta < 6:
+            self.delta = 6
         if str(event.key()) == "16777238":
-            self.delta += self.delta * 0.5
+            self.delta *= 1.5
             self.getImage()
         elif str(event.key()) == "16777239":
-            self.delta -= self.delta * 0.5
+            self.delta *= 0.5
             self.getImage()
 
 
