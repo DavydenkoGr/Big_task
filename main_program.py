@@ -1,43 +1,51 @@
 import os
 import sys
-
+from scaling import scaling
 import requests
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QStatusBar
 
 SCREEN_SIZE = [800, 450]
+map_api_server = "http://static-maps.yandex.ru/1.x/"
 
 
-class Example(QWidget):
+class Example(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.getImage()
         self.initUI()
 
     def getImage(self):
-        map_request = "http://static-maps.yandex.ru/1.x/?ll=37.530887,55.703118&spn=0.002,0.002&l=map"
-        response = requests.get(map_request)
+        map_params = {
+            "ll": ",".join([self.x_coord.text(), self.y_coord.text()]),
+            "spn": "0.01,0.01",
+            "l": "map"
+        }
+        response = requests.get(map_api_server, map_params)
 
         if not response:
-            print("Ошибка выполнения запроса:")
-            print(map_request)
-            print("Http статус:", response.status_code, "(", response.reason, ")")
+            self.statusBar().showMessage('Ошибка выполнения запроса')
+            return
+
+        self.statusBar().hide()
 
         # Запишем полученное изображение в файл.
         self.map_file = "map.png"
         with open(self.map_file, "wb") as file:
             file.write(response.content)
 
+        # Загрузка изображения на форму
+        self.pixmap = QPixmap(self.map_file)
+        self.image.setPixmap(self.pixmap)
+
     def initUI(self):
         self.setGeometry(100, 100, *SCREEN_SIZE)
         self.setWindowTitle('Большая задача по Maps API')
 
-        ## Изображение
-        self.pixmap = QPixmap(self.map_file)
+        # Пространство под изображение
+        self.map_file = "map.png"
         self.image = QLabel(self)
         self.image.move(0, 0)
         self.image.resize(600, 450)
-        self.image.setPixmap(self.pixmap)
 
         self.x_coord, self.y_coord = QLineEdit(self), QLineEdit(self)
         self.x_coord.resize(75, 25)
