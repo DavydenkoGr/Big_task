@@ -38,15 +38,19 @@ class Example(QWidget):
         self.y_lbl.move(105, 25)
         self.address.move(45, 135)
 
-        self.btn, self.btn1 = QPushButton(self), QPushButton(self)
+        self.btn, self.btn1, self.btn2 = QPushButton(self), QPushButton(self), QPushButton(self)
         self.btn.setText("Искать")
         self.btn1.setText("Искать по адресу")
+        self.btn2.setText("Сброс поискового результата")
         self.btn.resize(100, 20)
         self.btn1.resize(150, 20)
+        self.btn2.resize(180, 20)
         self.btn.move(45, 80)
         self.btn1.move(25, 190)
+        self.btn2.move(10, 215)
         self.btn.clicked.connect(self.restart)
         self.btn1.clicked.connect(self.restart)
+        self.btn2.clicked.connect(self.restart)
 
         self.type = QComboBox(self)
         self.type.resize(100, 20)
@@ -61,6 +65,7 @@ class Example(QWidget):
         Map.close()
 
     def restart(self):
+        self.i, self.rl_shift, self.ud_shift, self.pt = 0, 0, 0, True
         if self.sender().text() == "Искать по адресу":
             geocoder_params = {
                 "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
@@ -73,7 +78,8 @@ class Example(QWidget):
             x, y = toponym_coodrinates.split()
             self.x_coord.setText(x)
             self.y_coord.setText(y)
-        self.i, self.rl_shift, self.ud_shift = 0, 0, 0
+        elif self.sender().text() == "Сброс поискового результата":
+            self.pt = False
         Map.show()
         Map.getImage()
 
@@ -85,19 +91,24 @@ class Map(QWidget):
 
     def getImage(self):
         spn = scales[self.i]
+
         if ex.type.currentText() == "Карта":
             type = "map"
         elif ex.type.currentText() == "Спутник":
             type = "sat"
         else:
             type = "skl"
+        if ex.pt:
+            pt = ",".join([ex.x_coord.text(), ex.y_coord.text()]) + ",pm2gnm"
+        else:
+            pt = None
 
         map_params = {
             "ll": ",".join([str(float(ex.x_coord.text()) + self.rl_shift),
                             str(float(ex.y_coord.text()) + self.ud_shift)]),
             "spn": f"{spn},{spn}",
             "l": type,
-            "pt": ",".join([ex.x_coord.text(), ex.y_coord.text()]) + ",pm2gnm"
+            "pt": pt
         }
 
         response = requests.get(map_api_server, map_params)
