@@ -137,7 +137,6 @@ class Map(QWidget):
             if float(ex.y_coord.text()) + self.ud_shift not in range(-90, 90):
                 self.ud_shift += float(scales[self.i]) * 2
             self.getImage()
-        print(event.key())
 
 
 if __name__ == '__main__':
