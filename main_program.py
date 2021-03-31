@@ -72,7 +72,8 @@ class Example(QWidget):
 
     def restart(self):
         self.adinfo.clear()
-        Map.i, Map.rl_shift, Map.ud_shift = 0, 0, 0
+        if not Map.dont_change_pos:
+            Map.i, Map.rl_shift, Map.ud_shift = 0, 0, 0
         if self.sender().text() == "Искать по адресу":
             self.pt = True
             geocoder_params = {
@@ -83,7 +84,12 @@ class Example(QWidget):
             json_response = response.json()
             toponym_coodrinates = json_response["response"]["GeoObjectCollection"][
                 "featureMember"][0]["GeoObject"]["Point"]["pos"]
-            self.x, self.y = list(map(float, toponym_coodrinates.split()))
+            if Map.dont_change_pos:
+                Map.dont_change_pos = False
+                self.ptx, self.pty = list(map(float, toponym_coodrinates.split()))
+            else:
+                self.x, self.y = list(map(float, toponym_coodrinates.split()))
+                self.pty, self.ptx =  self.y, self.x
             self.adinfo.appendPlainText(json_response["response"]["GeoObjectCollection"][
                 "featureMember"][0]["GeoObject"]["metaDataProperty"]["GeocoderMetaData"][
                 "Address"]["formatted"])
@@ -111,7 +117,6 @@ class Map(QWidget):
 
     def getImage(self):
         spn = scales[self.i]
-
         if ex.type.currentText() == "Карта":
             type = "map"
         elif ex.type.currentText() == "Спутник":
@@ -119,25 +124,20 @@ class Map(QWidget):
         else:
             type = "skl"
         if ex.pt:
-            pt = ",".join([str(ex.x), str(ex.y)]) + ",pm2gnm"
+            pt = ",".join([str(ex.ptx), str(ex.pty)]) + ",pm2gnm"
         else:
             pt = None
-
         map_params = {
-            "ll": ",".join([str(ex.x + self.rl_shift),
-                            str(ex.y + self.ud_shift)]),
+            "ll": ",".join([str(float(ex.x) + self.rl_shift),
+                            str(float(ex.y) + self.ud_shift)]),
             "spn": f"{spn},{spn}",
             "l": type,
-            "pt": pt
-        }
-
+            "pt": pt}
         response = requests.get(map_api_server, map_params)
-
         # Запишем полученное изображение в файл.
         self.map_file = "map.png"
         with open(self.map_file, "wb") as file:
             file.write(response.content)
-
         # Загрузка изображения на форму
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
@@ -146,6 +146,7 @@ class Map(QWidget):
         self.setGeometry(300, 100, *SCREEN_SIZE)
         self.setWindowTitle('Большая задача по Maps API')
 
+        self.dont_change_pos = False
         self.i = 0
         self.rl_shift = 0
         self.ud_shift = 0
@@ -182,6 +183,24 @@ class Map(QWidget):
         elif str(event.key()) == "16777237":
             self.ud_shift -= float(scales[self.i])
             self.getImage()
+
+    def mousePressEvent(self, event):
+        print(event.x(), event.y())
+        x = ex.x + self.rl_shift + float(scales[self.i]) * 3.2 * (int(event.x()) - 300) / 600
+        y = ex.y + self.ud_shift - float(scales[self.i]) * 1.44 * (int(event.y()) - 222.5) / 450
+        geocoder_params = {
+            "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
+            "geocode": ",".join([str(x), str(y)]),
+            "format": "json"}
+        response = requests.get(geocoder_api_server, params=geocoder_params)
+        json_response = response.json()
+        toponym_address = json_response["response"]["GeoObjectCollection"][
+                "featureMember"][0]["GeoObject"]["metaDataProperty"]["GeocoderMetaData"][
+                "Address"]["formatted"]
+
+        self.dont_change_pos = True
+        ex.obj.setText(toponym_address)
+        ex.btn1.click()
 
 
 if __name__ == '__main__':
