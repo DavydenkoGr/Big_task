@@ -5,6 +5,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton, QWidget, QComboBox
 
 # 37.530887 55.703118
+# Барнаул Красноармейский 133
 
 SCREEN_SIZE = [600, 450]
 scales = ["0.002", "0.005", "0.01", "0.05", "0.1"]
@@ -21,23 +22,31 @@ class Example(QWidget):
         self.setGeometry(100, 100, 200, 450)
         self.setWindowTitle('Окно управления')
 
-        self.x_coord, self.y_coord = QLineEdit(self), QLineEdit(self)
+        self.x_coord, self.y_coord, self.obj = QLineEdit(self), QLineEdit(self), QLineEdit(self)
         self.x_coord.resize(75, 25)
         self.y_coord.resize(75, 25)
+        self.obj.resize(180, 25)
         self.x_coord.move(0, 50)
         self.y_coord.move(100, 50)
+        self.obj.move(10, 160)
 
-        self.x_lbl, self.y_lbl = QLabel(self), QLabel(self)
+        self.x_lbl, self.y_lbl, self.address = QLabel(self), QLabel(self), QLabel(self)
         self.x_lbl.setText("X")
         self.y_lbl.setText("Y")
+        self.address.setText("Введите адрес")
         self.x_lbl.move(5, 25)
         self.y_lbl.move(105, 25)
+        self.address.move(45, 135)
 
-        self.btn = QPushButton(self)
+        self.btn, self.btn1 = QPushButton(self), QPushButton(self)
         self.btn.setText("Искать")
+        self.btn1.setText("Искать по адресу")
         self.btn.resize(100, 20)
+        self.btn1.resize(150, 20)
         self.btn.move(45, 80)
+        self.btn1.move(25, 190)
         self.btn.clicked.connect(self.restart)
+        self.btn1.clicked.connect(self.restart)
 
         self.type = QComboBox(self)
         self.type.resize(100, 20)
@@ -52,6 +61,18 @@ class Example(QWidget):
         Map.close()
 
     def restart(self):
+        if self.sender().text() == "Искать по адресу":
+            geocoder_params = {
+                "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
+                "geocode": self.obj.text(),
+                "format": "json"}
+            response = requests.get(geocoder_api_server, params=geocoder_params)
+            json_response = response.json()
+            toponym_coodrinates = json_response["response"]["GeoObjectCollection"][
+                "featureMember"][0]["GeoObject"]["Point"]["pos"]
+            x, y = toponym_coodrinates.split()
+            self.x_coord.setText(x)
+            self.y_coord.setText(y)
         self.i, self.rl_shift, self.ud_shift = 0, 0, 0
         Map.show()
         Map.getImage()
@@ -75,7 +96,8 @@ class Map(QWidget):
             "ll": ",".join([str(float(ex.x_coord.text()) + self.rl_shift),
                             str(float(ex.y_coord.text()) + self.ud_shift)]),
             "spn": f"{spn},{spn}",
-            "l": type
+            "l": type,
+            "pt": ",".join([ex.x_coord.text(), ex.y_coord.text()]) + ",pm2gnm"
         }
 
         response = requests.get(map_api_server, map_params)
@@ -119,23 +141,15 @@ class Map(QWidget):
             self.getImage()
         elif str(event.key()) == "16777234":
             self.rl_shift -= float(scales[self.i]) * 2
-            if float(ex.x_coord.text()) + self.rl_shift not in range(-180, 180):
-                self.rl_shift += float(scales[self.i]) * 2
             self.getImage()
         elif str(event.key()) == "16777236":
             self.rl_shift += float(scales[self.i]) * 2
-            if float(ex.x_coord.text()) + self.rl_shift not in range(-180, 180):
-                self.rl_shift -= float(scales[self.i]) * 2
             self.getImage()
         elif str(event.key()) == "16777235":
             self.ud_shift += float(scales[self.i])
-            if float(ex.y_coord.text()) + self.ud_shift not in range(-90, 90):
-                self.ud_shift -= float(scales[self.i]) * 2
             self.getImage()
         elif str(event.key()) == "16777237":
             self.ud_shift -= float(scales[self.i])
-            if float(ex.y_coord.text()) + self.ud_shift not in range(-90, 90):
-                self.ud_shift += float(scales[self.i]) * 2
             self.getImage()
 
 
