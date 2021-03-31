@@ -2,7 +2,7 @@ import os
 import sys
 import requests
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton, QWidget
+from PyQt5.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton, QWidget, QComboBox
 
 # 37.530887 55.703118
 
@@ -39,6 +39,13 @@ class Example(QWidget):
         self.btn.move(45, 80)
         self.btn.clicked.connect(self.restart)
 
+        self.type = QComboBox(self)
+        self.type.resize(100, 20)
+        self.type.move(45, 110)
+        self.type.addItem("Карта")
+        self.type.addItem("Спутник")
+        self.type.addItem("Гибрид")
+
     def closeEvent(self, event):
         """При закрытии формы подчищаем за собой"""
         os.remove(self.map_file)
@@ -57,11 +64,18 @@ class Map(QWidget):
 
     def getImage(self):
         spn = scales[self.i]
+        if ex.type.currentText() == "Карта":
+            type = "map"
+        elif ex.type.currentText() == "Спутник":
+            type = "sat"
+        else:
+            type = "skl"
+
         map_params = {
             "ll": ",".join([str(float(ex.x_coord.text()) + self.rl_shift),
                             str(float(ex.y_coord.text()) + self.ud_shift)]),
             "spn": f"{spn},{spn}",
-            "l": "map"
+            "l": type
         }
 
         response = requests.get(map_api_server, map_params)
