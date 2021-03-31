@@ -2,9 +2,8 @@ import os
 import sys
 import requests
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton, QWidget, QComboBox
+from PyQt5.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton, QWidget, QComboBox, QPlainTextEdit
 
-# 37.530887 55.703118
 # Барнаул Красноармейский 133
 
 SCREEN_SIZE = [600, 450]
@@ -22,33 +21,21 @@ class Example(QWidget):
         self.setGeometry(100, 100, 200, 450)
         self.setWindowTitle('Окно управления')
 
-        self.x_coord, self.y_coord, self.obj = QLineEdit(self), QLineEdit(self), QLineEdit(self)
-        self.x_coord.resize(75, 25)
-        self.y_coord.resize(75, 25)
+        self.obj = QLineEdit(self)
         self.obj.resize(180, 25)
-        self.x_coord.move(0, 50)
-        self.y_coord.move(100, 50)
         self.obj.move(10, 160)
 
-        self.x_lbl, self.y_lbl, self.address = QLabel(self), QLabel(self), QLabel(self)
-        self.x_lbl.setText("X")
-        self.y_lbl.setText("Y")
+        self.address = QLabel(self)
         self.address.setText("Введите адрес")
-        self.x_lbl.move(5, 25)
-        self.y_lbl.move(105, 25)
         self.address.move(45, 135)
 
-        self.btn, self.btn1, self.btn2 = QPushButton(self), QPushButton(self), QPushButton(self)
-        self.btn.setText("Искать")
+        self.btn1, self.btn2 = QPushButton(self), QPushButton(self)
         self.btn1.setText("Искать по адресу")
         self.btn2.setText("Сброс поискового результата")
-        self.btn.resize(100, 20)
         self.btn1.resize(150, 20)
         self.btn2.resize(180, 20)
-        self.btn.move(45, 80)
         self.btn1.move(25, 190)
         self.btn2.move(10, 215)
-        self.btn.clicked.connect(self.restart)
         self.btn1.clicked.connect(self.restart)
         self.btn2.clicked.connect(self.restart)
 
@@ -59,14 +46,20 @@ class Example(QWidget):
         self.type.addItem("Спутник")
         self.type.addItem("Гибрид")
 
+        self.adinfo = QPlainTextEdit(self)
+        self.adinfo.resize(180, 80)
+        self.adinfo.move(10, 10)
+        self.adinfo.setDisabled(True)
+
     def closeEvent(self, event):
         """При закрытии формы подчищаем за собой"""
         os.remove(self.map_file)
         Map.close()
 
     def restart(self):
-        self.i, self.rl_shift, self.ud_shift, self.pt = 0, 0, 0, True
+        self.i, self.rl_shift, self.ud_shift = 0, 0, 0
         if self.sender().text() == "Искать по адресу":
+            self.pt = True
             geocoder_params = {
                 "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
                 "geocode": self.obj.text(),
@@ -75,11 +68,13 @@ class Example(QWidget):
             json_response = response.json()
             toponym_coodrinates = json_response["response"]["GeoObjectCollection"][
                 "featureMember"][0]["GeoObject"]["Point"]["pos"]
-            x, y = toponym_coodrinates.split()
-            self.x_coord.setText(x)
-            self.y_coord.setText(y)
-        elif self.sender().text() == "Сброс поискового результата":
+            self.x, self.y = list(map(float, toponym_coodrinates.split()))
+            self.adinfo.appendPlainText(json_response["response"]["GeoObjectCollection"][
+                "featureMember"][0]["GeoObject"]["metaDataProperty"]["GeocoderMetaData"][
+                "Address"]["formatted"])
+        else:
             self.pt = False
+            self.adinfo.clear()
         Map.show()
         Map.getImage()
 
@@ -99,13 +94,13 @@ class Map(QWidget):
         else:
             type = "skl"
         if ex.pt:
-            pt = ",".join([ex.x_coord.text(), ex.y_coord.text()]) + ",pm2gnm"
+            pt = ",".join([str(ex.x), str(ex.y)]) + ",pm2gnm"
         else:
             pt = None
 
         map_params = {
-            "ll": ",".join([str(float(ex.x_coord.text()) + self.rl_shift),
-                            str(float(ex.y_coord.text()) + self.ud_shift)]),
+            "ll": ",".join([str(ex.x + self.rl_shift),
+                            str(ex.y + self.ud_shift)]),
             "spn": f"{spn},{spn}",
             "l": type,
             "pt": pt
