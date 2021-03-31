@@ -21,6 +21,8 @@ class Example(QWidget):
         self.setGeometry(100, 100, 200, 450)
         self.setWindowTitle('Окно управления')
 
+        self.pc = "Почтовый индекс не найден"
+
         self.obj = QLineEdit(self)
         self.obj.resize(180, 25)
         self.obj.move(10, 160)
@@ -29,15 +31,19 @@ class Example(QWidget):
         self.address.setText("Введите адрес")
         self.address.move(45, 135)
 
-        self.btn1, self.btn2 = QPushButton(self), QPushButton(self)
+        self.btn1, self.btn2, self.btn3 = QPushButton(self), QPushButton(self), QPushButton(self)
         self.btn1.setText("Искать по адресу")
         self.btn2.setText("Сброс поискового результата")
+        self.btn3.setText("Показать почтовый индекс")
         self.btn1.resize(150, 20)
         self.btn2.resize(180, 20)
+        self.btn3.resize(180, 20)
         self.btn1.move(25, 190)
         self.btn2.move(10, 215)
+        self.btn3.move(10, 240)
         self.btn1.clicked.connect(self.restart)
         self.btn2.clicked.connect(self.restart)
+        self.btn3.clicked.connect(self.postal)
 
         self.type = QComboBox(self)
         self.type.resize(100, 20)
@@ -56,8 +62,17 @@ class Example(QWidget):
         os.remove(self.map_file)
         Map.close()
 
+    def postal(self):
+        if self.btn3.text() == "Показать почтовый индекс":
+            self.btn3.setText("Спрятать почтовый индекс")
+            self.adinfo.appendPlainText(self.pc)
+        else:
+            self.btn3.setText("Показать почтовый индекс")
+            self.adinfo.undo()
+
     def restart(self):
-        self.i, self.rl_shift, self.ud_shift = 0, 0, 0
+        self.adinfo.clear()
+        Map.i, Map.rl_shift, Map.ud_shift = 0, 0, 0
         if self.sender().text() == "Искать по адресу":
             self.pt = True
             geocoder_params = {
@@ -72,9 +87,19 @@ class Example(QWidget):
             self.adinfo.appendPlainText(json_response["response"]["GeoObjectCollection"][
                 "featureMember"][0]["GeoObject"]["metaDataProperty"]["GeocoderMetaData"][
                 "Address"]["formatted"])
+
+            try:
+                self.pc = json_response["response"]["GeoObjectCollection"][
+                    "featureMember"][0]["GeoObject"]["metaDataProperty"][
+                    "GeocoderMetaData"]["Address"]["postal_code"]
+            except Exception:
+                self.pc = "Почтовый индекс не найден"
+
+            if self.btn3.text() == "Спрятать почтовый индекс":
+                self.adinfo.appendPlainText(self.pc)
         else:
             self.pt = False
-            self.adinfo.clear()
+            self.pc = "Почтовый индекс не найден"
         Map.show()
         Map.getImage()
 
