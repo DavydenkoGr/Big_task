@@ -1,6 +1,8 @@
 import os
+import math
 import sys
 import requests
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton, QWidget, QComboBox, QPlainTextEdit
 
@@ -10,6 +12,19 @@ SCREEN_SIZE = [600, 450]
 scales = ["0.002", "0.005", "0.01", "0.05", "0.1"]
 map_api_server = "http://static-maps.yandex.ru/1.x/"
 geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
+search_api_server = "https://search-maps.yandex.ru/v1/"
+
+
+def lonlat_distance(a, b):
+    degree_to_meters_factor = 111 * 1000
+    a_lon, a_lat = a
+    b_lon, b_lat = b
+    radians_lattitude = math.radians((a_lat + b_lat) / 2.)
+    lat_lon_factor = math.cos(radians_lattitude)
+    dx = abs(a_lon - b_lon) * degree_to_meters_factor * lat_lon_factor
+    dy = abs(a_lat - b_lat) * degree_to_meters_factor
+    distance = math.sqrt(dx * dx + dy * dy)
+    return distance
 
 
 class Example(QWidget):
@@ -185,19 +200,41 @@ class Map(QWidget):
             self.getImage()
 
     def mousePressEvent(self, event):
-        print(event.x(), event.y())
         x = ex.x + self.rl_shift + float(scales[self.i]) * 3.2 * (int(event.x()) - 300) / 600
         y = ex.y + self.ud_shift - float(scales[self.i]) * 1.44 * (int(event.y()) - 222.5) / 450
-        geocoder_params = {
-            "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
-            "geocode": ",".join([str(x), str(y)]),
-            "format": "json"}
-        response = requests.get(geocoder_api_server, params=geocoder_params)
-        json_response = response.json()
-        toponym_address = json_response["response"]["GeoObjectCollection"][
-                "featureMember"][0]["GeoObject"]["metaDataProperty"]["GeocoderMetaData"][
-                "Address"]["formatted"]
-
+        if event.button() == Qt.LeftButton:
+            geocoder_params = {
+                "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
+                "geocode": ",".join([str(x), str(y)]),
+                "format": "json"}
+            response = requests.get(geocoder_api_server, params=geocoder_params)
+            json_response = response.json()
+            toponym_address = json_response["response"]["GeoObjectCollection"][
+                    "featureMember"][0]["GeoObject"]["metaDataProperty"]["GeocoderMetaData"][
+                    "Address"]["formatted"]
+        elif event.button() == Qt.RightButton:
+            address_ll = ",".join([str(x), str(y)])
+            search_params = {
+                "apikey": "dda3ddba-c9ea-4ead-9010-f43fbc15c6e3",
+                "lang": "ru_RU",
+                "text": "аптека",
+                "ll": address_ll,
+                "type": "biz"}
+            response = requests.get(search_api_server, params=search_params)
+            print(address_ll)
+            json_response = response.json()
+            # Получаем первую найденную организацию.
+            organization = json_response["features"][0]
+            # Адрес организации.
+            toponym_address = organization["properties"]["CompanyMetaData"]["address"]
+            point = organization["geometry"]["coordinates"]
+            print(lonlat_distance((x, y), (float(point[0]), float(point[1]))))
+            if lonlat_distance((x, y), (float(point[0]), float(point[1]))) > 100:
+                ex.adinfo.clear()
+                ex.adinfo.appendPlainText("Не найдено аптек поблизости")
+                return
+        else:
+            return
         self.dont_change_pos = True
         ex.obj.setText(toponym_address)
         ex.btn1.click()
